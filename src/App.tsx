@@ -15,7 +15,7 @@ function App() {
       <header className="relative px-6 pt-12 pb-32 md:px-24 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="src/images/bg.png"
+            src="https://github.com/aias313/marcusandmuse/blob/main/src/images/bg.png?raw=true"
             alt="bg"
             className="absolute inset-0 w-full h-full object-cover opacity-100"
           />
