@@ -27,7 +27,10 @@ function App() {
             MARCUS & MUSE<span className="text-accent">.</span>
           </h1>
           <button className="px-6 py-3 text-sm font-medium border border-light/20 text-light rounded-full hover:bg-light/10 transition-colors">
-            Get in Touch
+             <a
+                href="mailto:hello@marcusandmuse.com"
+                className="text-muted hover:text-light transition-colors"
+              >Get in Touch</a>
           </button>
         </nav>
 
