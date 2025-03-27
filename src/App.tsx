@@ -192,7 +192,7 @@ function App() {
               <h5 className="font-medium mb-4">Follow</h5>
               <div className="flex flex-col gap-2">
                 <a
-                  href="#"
+                  href="https://www.instagram.com/marcusandmuse/"
                   className="text-muted hover:text-light transition-colors"
                 >
                   Instagram
