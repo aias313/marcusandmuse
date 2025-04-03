@@ -5,6 +5,151 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Marcus and Muse Strategic Digital Consulting</title>
+    <style>
+      /* Base Chat Widget Styling (Window Mode) */
+.n8n-chat-widget {
+  /* Font matching - Use your site's primary sans-serif font */
+  font-family: sans-serif; /* Replace with your site's font if available, e.g., 'Arial', 'Helvetica Neue', etc. */
+}
+
+/* Chat Bubble (if using window mode and it's visible when closed) */
+.n8n-chat-bubble {
+  background-color: #E87D5A !important; /* Orange from the button */
+  color: #FFFFFF !important;
+  /* Add box-shadow or other styles if needed */
+}
+.n8n-chat-bubble svg {
+    fill: #FFFFFF !important; /* Make bubble icon white */
+}
+
+
+/* Chat Window Container */
+.n8n-chat-window {
+  background-color: #2A394E; /* Dark blue/gray from the background */
+  border: 1px solid #405065; /* Slightly lighter border */
+  border-radius: 8px; /* Optional: slightly rounded corners */
+  color: #F0F0F0; /* Off-white text */
+}
+
+/* Chat Header */
+.n8n-chat-header {
+  background-color: #1E2A3A; /* Slightly darker shade for header */
+  color: #FFFFFF; /* White title */
+  border-bottom: 1px solid #405065;
+  padding: 15px 20px; /* Adjust padding as needed */
+}
+
+.n8n-chat-header .n8n-chat-title {
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.n8n-chat-header .n8n-chat-subtitle {
+  font-size: 0.9em;
+  color: #B0C4DE; /* Lighter blue/gray for subtitle */
+  margin-top: 4px;
+}
+
+/* Close button in header */
+.n8n-chat-header .n8n-chat-close-button svg {
+    fill: #B0C4DE !important; /* Match subtitle color */
+}
+.n8n-chat-header .n8n-chat-close-button:hover svg {
+    fill: #FFFFFF !important; /* White on hover */
+}
+
+
+/* Message Area */
+.n8n-chat-messages-container {
+  background-color: #2A394E; /* Match window background */
+  padding: 15px;
+}
+
+/* Individual Messages */
+.n8n-chat-message {
+  color: #FFFFFF; /* White text for messages */
+  padding: 8px 12px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  max-width: 80%;
+  line-height: 1.4;
+}
+
+/* Bot Messages */
+.n8n-chat-message.n8n-chat-message-bot {
+  background-color: #3B4C62; /* Slightly different shade for bot */
+  color: #FFFFFF;
+  align-self: flex-start; /* Align bot messages left */
+  border-bottom-left-radius: 2px; /* Styling touch */
+}
+
+/* User Messages */
+.n8n-chat-message.n8n-chat-message-user {
+  background-color: #E87D5A; /* Orange like the button for user messages */
+  color: #FFFFFF;
+  align-self: flex-end; /* Align user messages right */
+  border-bottom-right-radius: 2px; /* Styling touch */
+}
+
+/* Input Area */
+.n8n-chat-input-container {
+  border-top: 1px solid #405065;
+  background-color: #1E2A3A; /* Match header background */
+  padding: 10px 15px;
+}
+
+.n8n-chat-input {
+  background-color: #3B4C62; /* Input field background */
+  color: #FFFFFF; /* Input text color */
+  border: 1px solid #506075;
+  border-radius: 5px;
+  padding: 10px;
+}
+
+.n8n-chat-input::placeholder {
+  color: #A0B4CE; /* Placeholder text color */
+  opacity: 0.8;
+}
+
+/* Send Button */
+.n8n-chat-send-button {
+  background-color: #E87D5A !important; /* Orange button color */
+  border-radius: 5px;
+  padding: 8px; /* Adjust as needed */
+  margin-left: 10px; /* Space between input and button */
+}
+
+.n8n-chat-send-button svg {
+  fill: #FFFFFF !important; /* White icon */
+}
+
+.n8n-chat-send-button:hover {
+  background-color: #D46F4D !important; /* Darker orange on hover */
+}
+
+/* Welcome Screen Button (if showWelcomeScreen is true) */
+.n8n-chat-button-primary { /* This might be the class for the 'Start Conversation' button */
+    background-color: #E87D5A !important;
+    color: #FFFFFF !important;
+    border-radius: 20px !important; /* Rounded like the site button */
+    padding: 10px 20px !important;
+    font-weight: bold;
+    border: none !important;
+}
+.n8n-chat-button-primary:hover {
+    background-color: #D46F4D !important; /* Darker orange on hover */
+}
+
+/* Footer (if used) */
+.n8n-chat-footer {
+    /* Style if needed */
+    font-size: 0.8em;
+    text-align: center;
+    padding: 5px;
+    color: #A0B4CE;
+}
+    </style>
   </head>
   <body>
     <div id="root"></div>
