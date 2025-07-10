@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import {
   ArrowUpRight,
   ChevronDown,
@@ -7,8 +8,9 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
+import PrivacyPolicy from './PrivacyPolicy';
 
-function App() {
+function HomePage() {
   return (
     <div className="min-h-screen bg-dark text-light">
       {/* Hero Section */}
@@ -198,11 +200,22 @@ function App() {
                   Instagram
                 </a>
                 <a
-                  href="https://linkedin.com/in/aaronfoley"
+                  href="https://www.linkedin.com/in/aaronfoley/"
                   className="text-muted hover:text-light transition-colors"
                 >
                   LinkedIn
                 </a>
+              </div>
+            </div>
+            <div>
+              <h5 className="font-medium mb-4">Legal</h5>
+              <div className="flex flex-col gap-2">
+                <Link
+                  to="/privacy-policy"
+                  className="text-muted hover:text-light transition-colors"
+                >
+                  Privacy Policy
+                </Link>
               </div>
             </div>
           </div>
@@ -222,13 +235,24 @@ function ServiceCard({
   description: string;
 }) {
   return (
-    <div className="group p-8 rounded-2xl border border-light/10 hover:border-accent/50 transition-all hover:-translate-y-1 duration-300">
-      <div className="w-12 h-12 flex items-center justify-center text-accent mb-6">
-        {icon}
+    <div className="p-8 rounded-xl bg-light/5 border border-light/10 hover:bg-light/10 transition-colors">
+      <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-6">
+        <div className="text-accent">{icon}</div>
       </div>
-      <h4 className="text-2xl font-bold tracking-tighter mb-3">{title}</h4>
+      <h4 className="text-xl font-bold tracking-tighter mb-4">{title}</h4>
       <p className="text-muted">{description}</p>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      </Routes>
+    </Router>
   );
 }
 
