@@ -148,13 +148,38 @@ export default function OpenWebDataViewerPage() {
         </div>
       </section>
 
+      {/* Screenshots Section */}
+      <section className="py-16 px-6 md:px-0 max-w-5xl mx-auto">
+        <h2 className="text-3xl font-bold mb-8 text-accent text-center tracking-tighter">See It In Action</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-8">
+          {[
+            '/screenshots/Screenshot 2025-07-10 at 3.17.57\u202FPM.png',
+            '/screenshots/Screenshot 2025-07-10 at 3.18.08\u202FPM.png',
+            '/screenshots/Screenshot 2025-07-10 at 3.18.18\u202FPM.png',
+            '/screenshots/Screenshot 2025-07-10 at 3.18.29\u202FPM.png',
+          ].map((src, idx) => (
+            <div key={src} className="relative group overflow-hidden rounded-xl shadow-lg border border-light/10">
+              <img
+                src={src}
+                alt={`Screenshot ${idx + 1}`}
+                className="w-full h-64 object-cover object-top transition-transform duration-300 group-hover:scale-105 cursor-pointer"
+                onClick={() => window.open(src, '_blank')}
+              />
+              <div className="absolute inset-0 bg-dark/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <span className="text-lg text-white font-semibold">Click to Enlarge</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Call to Action */}
       <section className="py-20 px-6 text-center bg-gradient-to-br from-accent/80 via-dark/90 to-dark">
         <h2 className="text-3xl md:text-4xl font-bold mb-6 text-light tracking-tighter">Get Started Now</h2>
         <p className="text-lg text-accent mb-8">Open Web Data Viewer—Empowering you with the data you need to make smarter, safer, and more effective advertising decisions.</p>
         <div className="flex flex-col md:flex-row gap-4 justify-center">
           <a href="#" className="px-8 py-3 rounded-full bg-accent text-dark font-semibold shadow hover:bg-accent/90 transition-colors">Install from Chrome Web Store</a>
-          <a href="#" className="px-8 py-3 rounded-full border border-accent text-accent font-semibold hover:bg-accent/10 transition-colors">Learn More About OpenSincera</a>
+          <a href="https://open.sincera.io/" className="px-8 py-3 rounded-full border border-accent text-accent font-semibold hover:bg-accent/10 transition-colors">Learn More About OpenSincera</a>
           <a href="/privacy-policy" className="px-8 py-3 rounded-full border border-light/20 text-light font-semibold hover:bg-light/10 transition-colors">Read Our Privacy Policy</a>
         </div>
       </section>
