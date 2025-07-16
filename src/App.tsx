@@ -9,6 +9,7 @@ import {
   Zap,
 } from 'lucide-react';
 import PrivacyPolicy from './PrivacyPolicy';
+import OpenWebDataViewerPage from './OpenWebDataViewerPage';
 
 function HomePage() {
   return (
@@ -216,6 +217,12 @@ function HomePage() {
                 >
                   Privacy Policy
                 </Link>
+                <Link
+                  to="/OpenWebDataViewer"
+                  className="text-muted hover:text-light transition-colors"
+                >
+                  Open Web Data Viewer
+                </Link>
               </div>
             </div>
           </div>
@@ -251,6 +258,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/OpenWebDataViewer" element={<OpenWebDataViewerPage />} />
       </Routes>
     </Router>
   );
