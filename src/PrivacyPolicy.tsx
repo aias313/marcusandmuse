@@ -53,7 +53,7 @@ function PrivacyPolicy() {
               <li>Any other information you choose to provide</li>
             </ul>
 
-            <h3 className="text-xl font-semibold mb-4">2.2 Usage Information</h3>
+            <h3 className="text-xl font-semibold mb-4">2.2 Usage  Information</h3>
             <p className="text-muted mb-4">
               We automatically collect certain information about your use of our Services:
             </p>
