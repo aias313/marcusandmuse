@@ -93,7 +93,7 @@ export default function OpenWebDataViewerPage() {
         </p>
         <div className="flex flex-col md:flex-row gap-4 justify-center">
           <a href="#" className="px-8 py-3 rounded-full bg-accent text-dark font-semibold shadow hover:bg-accent/90 transition-colors">Install from Chrome Web Store</a>
-          <a href="#" className="px-8 py-3 rounded-full border border-accent text-accent font-semibold hover:bg-accent/10 transition-colors">Learn More About OpenSincera</a>
+          <a href="https://open.sincera.io/" className="px-8 py-3 rounded-full border border-accent text-accent font-semibold hover:bg-accent/10 transition-colors">Learn More About OpenSincera</a>
           <a href="/privacy-policy" className="px-8 py-3 rounded-full border border-light/20 text-light font-semibold hover:bg-light/10 transition-colors">Read Our Privacy Policy</a>
         </div>
       </section>
