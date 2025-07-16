@@ -72,6 +72,18 @@ const benefits = [
 export default function OpenWebDataViewerPage() {
   return (
     <div className="min-h-screen bg-dark text-light">
+      {/* Site Navigation */}
+      <nav className="flex items-center justify-between px-6 pt-8 md:px-24 mb-8">
+        <h1 className="text-2xl font-bold tracking-tighter">
+          MARCUS & MUSE<span className="text-accent">.</span>
+        </h1>
+        <button className="px-6 py-3 text-sm font-medium border border-light/20 text-light rounded-full hover:bg-light/10 transition-colors">
+          <a
+            href="mailto:hello@marcusandmuse.com"
+            className="text-muted hover:text-light transition-colors"
+          >Get in Touch</a>
+        </button>
+      </nav>
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-accent/80 via-dark/90 to-dark px-6 py-20 text-center">
         <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tighter">Open Web Data Viewer</h1>
