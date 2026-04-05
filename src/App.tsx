@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import {
   ArrowUpRight,
   ChevronDown,
@@ -10,6 +11,9 @@ import {
 } from 'lucide-react';
 import PrivacyPolicy from './PrivacyPolicy';
 import OpenWebDataViewerPage from './OpenWebDataViewerPage';
+import ContentEnginePage from './ContentEnginePage';
+
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 
 function HomePage() {
   return (
@@ -209,6 +213,23 @@ function HomePage() {
               </div>
             </div>
             <div>
+              <h5 className="font-medium mb-4">Tools</h5>
+              <div className="flex flex-col gap-2">
+                <Link
+                  to="/content-engine"
+                  className="text-muted hover:text-light transition-colors"
+                >
+                  Content Engine
+                </Link>
+                <Link
+                  to="/OpenWebDataViewer"
+                  className="text-muted hover:text-light transition-colors"
+                >
+                  Open Web Data Viewer
+                </Link>
+              </div>
+            </div>
+            <div>
               <h5 className="font-medium mb-4">Legal</h5>
               <div className="flex flex-col gap-2">
                 <Link
@@ -216,12 +237,6 @@ function HomePage() {
                   className="text-muted hover:text-light transition-colors"
                 >
                   Privacy Policy
-                </Link>
-                <Link
-                  to="/OpenWebDataViewer"
-                  className="text-muted hover:text-light transition-colors"
-                >
-                  Open Web Data Viewer
                 </Link>
               </div>
             </div>
@@ -254,13 +269,24 @@ function ServiceCard({
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/OpenWebDataViewer" element={<OpenWebDataViewerPage />} />
-      </Routes>
-    </Router>
+    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+      <Router>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/OpenWebDataViewer" element={<OpenWebDataViewerPage />} />
+          <Route
+            path="/content-engine"
+            element={
+              <>
+                <SignedIn><ContentEnginePage /></SignedIn>
+                <SignedOut><RedirectToSignIn /></SignedOut>
+              </>
+            }
+          />
+        </Routes>
+      </Router>
+    </ClerkProvider>
   );
 }
 
