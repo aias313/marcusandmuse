@@ -66,8 +66,9 @@ npm run dev                  # http://localhost:3000
   - `B → A`: Beacon is paid, Northstar pays — **15% of net profit, 6-mo tail**
 - Referrals in **submitted / accepted / rejected / converted** states
 - For the converted referral: revenue entries with itemized deductions, fee
-  calculations (computed by the same `computeFee` the Inngest job will use), an
-  issued statement with line items, and a recorded payment
+  calculations (computed by the same `computeFee` the Inngest job will use),
+  per-referral issued statements (with snapshotted deduction breakdown), and a
+  recorded payment
 - Audit-log entries throughout
 
 Roles flip purely based on which terms row applies — proving roles are a

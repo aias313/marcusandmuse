@@ -5,7 +5,7 @@
  * The fee for a single revenue entry depends on:
  *   1. The terms active for the relevant DIRECTION (referring → paying).
  *   2. Whether the entry's accounting period falls inside the fee tail window
- *      that starts at the referral's conversion month and runs `tailMonths`.
+ *      that starts at the referral's ACCEPTED month and runs `tailMonths`.
  *   3. The fee basis: a percentage of net profit / gross revenue, or a flat fee.
  */
 import { applyBps } from "./money";
@@ -50,15 +50,16 @@ export function addMonthsUTC(d: Date, months: number): Date {
 /**
  * Compute the fee owed for one revenue entry.
  *
- * Tail window: [conversionMonth, conversionMonth + tailMonths). A period equal
- * to the conversion month counts; the month exactly `tailMonths` later does not.
+ * Tail window: [acceptedMonth, acceptedMonth + tailMonths). A period equal to
+ * the accepted month counts; the month exactly `tailMonths` later does not.
+ * The anchor is the referral's ACCEPTED date (acceptance starts the clock).
  */
 export function computeFee(
   terms: TermsInput,
-  convertedAt: Date,
+  acceptedAt: Date,
   revenue: RevenueInput,
 ): FeeResult {
-  const tailStart = startOfMonthUTC(convertedAt);
+  const tailStart = startOfMonthUTC(acceptedAt);
   const tailEnd = addMonthsUTC(tailStart, terms.tailMonths);
   const period = startOfMonthUTC(revenue.period);
 

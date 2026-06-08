@@ -1,5 +1,5 @@
 {
-  "id": "d46d7861-adfd-4d1c-ab26-fb2ab2c4e26d",
+  "id": "a130a155-39a7-4c5d-a5fe-bee236eee8f1",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1124,6 +1124,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "converted_at": {
           "name": "converted_at",
           "type": "timestamp with time zone",
@@ -1311,13 +1317,6 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
-        },
-        "currency": {
-          "name": "currency",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'USD'"
         },
         "effective_from": {
           "name": "effective_from",
@@ -1510,6 +1509,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'invited'"
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'USD'"
         },
         "invited_email": {
           "name": "invited_email",
@@ -1926,8 +1932,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.statement_line_items": {
-      "name": "statement_line_items",
+    "public.statement_deductions": {
+      "name": "statement_deductions",
       "schema": "",
       "columns": {
         "id": {
@@ -1943,47 +1949,23 @@
           "primaryKey": false,
           "notNull": true
         },
-        "referral_id": {
-          "name": "referral_id",
+        "category_id": {
+          "name": "category_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "referred_client_name": {
-          "name": "referred_client_name",
+        "label": {
+          "name": "label",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "gross_revenue": {
-          "name": "gross_revenue",
+        "amount": {
+          "name": "amount",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
-        },
-        "deductions": {
-          "name": "deductions",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "net_profit": {
-          "name": "net_profit",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "fee_amount": {
-          "name": "fee_amount",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "fee_calculation_id": {
-          "name": "fee_calculation_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -2001,8 +1983,8 @@
         }
       },
       "indexes": {
-        "statement_line_items_statement_idx": {
-          "name": "statement_line_items_statement_idx",
+        "statement_deductions_statement_idx": {
+          "name": "statement_deductions_statement_idx",
           "columns": [
             {
               "expression": "statement_id",
@@ -2018,9 +2000,9 @@
         }
       },
       "foreignKeys": {
-        "statement_line_items_statement_id_statements_id_fk": {
-          "name": "statement_line_items_statement_id_statements_id_fk",
-          "tableFrom": "statement_line_items",
+        "statement_deductions_statement_id_statements_id_fk": {
+          "name": "statement_deductions_statement_id_statements_id_fk",
+          "tableFrom": "statement_deductions",
           "tableTo": "statements",
           "columnsFrom": [
             "statement_id"
@@ -2031,25 +2013,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "statement_line_items_referral_id_referrals_id_fk": {
-          "name": "statement_line_items_referral_id_referrals_id_fk",
-          "tableFrom": "statement_line_items",
-          "tableTo": "referrals",
+        "statement_deductions_category_id_deduction_categories_id_fk": {
+          "name": "statement_deductions_category_id_deduction_categories_id_fk",
+          "tableFrom": "statement_deductions",
+          "tableTo": "deduction_categories",
           "columnsFrom": [
-            "referral_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "statement_line_items_fee_calculation_id_fee_calculations_id_fk": {
-          "name": "statement_line_items_fee_calculation_id_fee_calculations_id_fk",
-          "tableFrom": "statement_line_items",
-          "tableTo": "fee_calculations",
-          "columnsFrom": [
-            "fee_calculation_id"
+            "category_id"
           ],
           "columnsTo": [
             "id"
@@ -2078,6 +2047,18 @@
         "relationship_id": {
           "name": "relationship_id",
           "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "referral_id": {
+          "name": "referral_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "referred_client_name": {
+          "name": "referred_client_name",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -2114,8 +2095,8 @@
           "notNull": true,
           "default": "'draft'"
         },
-        "total_gross": {
-          "name": "total_gross",
+        "gross_revenue": {
+          "name": "gross_revenue",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,
@@ -2128,19 +2109,25 @@
           "notNull": true,
           "default": 0
         },
-        "total_net": {
-          "name": "total_net",
+        "net_profit": {
+          "name": "net_profit",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,
           "default": 0
         },
-        "total_fee": {
-          "name": "total_fee",
+        "fee_amount": {
+          "name": "fee_amount",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "fee_calculation_id": {
+          "name": "fee_calculation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "issued_at": {
           "name": "issued_at",
@@ -2191,23 +2178,26 @@
           "method": "btree",
           "with": {}
         },
-        "statements_direction_period_uq": {
-          "name": "statements_direction_period_uq",
+        "statements_referral_idx": {
+          "name": "statements_referral_idx",
           "columns": [
             {
-              "expression": "relationship_id",
+              "expression": "referral_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            },
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "statements_referral_period_uq": {
+          "name": "statements_referral_period_uq",
+          "columns": [
             {
-              "expression": "referring_org_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "paying_org_id",
+              "expression": "referral_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2239,6 +2229,19 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
+        "statements_referral_id_referrals_id_fk": {
+          "name": "statements_referral_id_referrals_id_fk",
+          "tableFrom": "statements",
+          "tableTo": "referrals",
+          "columnsFrom": [
+            "referral_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "statements_referring_org_id_organizations_id_fk": {
           "name": "statements_referring_org_id_organizations_id_fk",
           "tableFrom": "statements",
@@ -2263,6 +2266,19 @@
             "id"
           ],
           "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "statements_fee_calculation_id_fee_calculations_id_fk": {
+          "name": "statements_fee_calculation_id_fee_calculations_id_fk",
+          "tableFrom": "statements",
+          "tableTo": "fee_calculations",
+          "columnsFrom": [
+            "fee_calculation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "statements_issued_by_user_id_users_id_fk": {

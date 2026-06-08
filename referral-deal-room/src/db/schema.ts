@@ -229,6 +229,12 @@ export const relationships = pgTable(
       .references(() => organizations.id, { onDelete: "restrict" }),
     orgBId: uuid().references(() => organizations.id, { onDelete: "restrict" }),
     status: relationshipStatus().notNull().default("invited"),
+    /**
+     * The single currency for this entire deal room. One currency per
+     * relationship (both directions of terms, all revenue, statements, and
+     * payments use it) — set at creation, not per-direction.
+     */
+    currency: currencyCode(),
     /** Email the invite was sent to (resolves to orgB on acceptance). */
     invitedEmail: text(),
     createdByUserId: uuid().references(() => users.id, { onDelete: "set null" }),
@@ -264,9 +270,12 @@ export const relationshipTerms = pgTable(
     feePercentBps: integer(),
     /** Fixed amount per period in cents. Required when feeBasis = 'flat'. */
     flatAmount: cents(),
-    /** Length of the fee tail, in months, measured from conversion. */
+    /**
+     * Length of the fee tail, in months, measured from the referral's
+     * ACCEPTED date (acceptance starts the clock). Currency is inherited from
+     * the parent relationship (one currency per deal).
+     */
     tailMonths: integer().notNull(),
-    currency: currencyCode(),
     /** Versioning window. effectiveTo = null means "currently active". */
     effectiveFrom: timestamp({ withTimezone: true }).notNull().defaultNow(),
     effectiveTo: timestamp({ withTimezone: true }),
@@ -323,11 +332,16 @@ export const referrals = pgTable(
       onDelete: "set null",
     }),
     submittedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-    /** Accept/reject decision metadata. */
+    /** Accept/reject decision metadata (generic — covers both outcomes). */
     decidedAt: timestamp({ withTimezone: true }),
     decidedByUserId: uuid().references(() => users.id, { onDelete: "set null" }),
     rejectionReason: text(),
-    /** When marked converted — this date starts the fee tail window. */
+    /**
+     * Acceptance timestamp — the fee tail window is anchored here
+     * (accepted date + tailMonths). Set only when the referral is accepted.
+     */
+    acceptedAt: timestamp({ withTimezone: true }),
+    /** When marked converted (client signed/paying); gates revenue logging. */
     convertedAt: timestamp({ withTimezone: true }),
     closedAt: timestamp({ withTimezone: true }),
     ...timestamps,
@@ -468,7 +482,7 @@ export const feeCalculations = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// Statements (monthly rollups, immutable once issued) + payments
+// Statements (PER-REFERRAL monthly, immutable once issued) + payments
 // ---------------------------------------------------------------------------
 
 export const statements = pgTable(
@@ -478,7 +492,13 @@ export const statements = pgTable(
     relationshipId: uuid()
       .notNull()
       .references(() => relationships.id, { onDelete: "cascade" }),
-    // The direction this statement bills.
+    /** The specific referred client/relationship this statement bills. */
+    referralId: uuid()
+      .notNull()
+      .references(() => referrals.id, { onDelete: "cascade" }),
+    /** Snapshot client name at issue time for immutability. */
+    referredClientName: text().notNull(),
+    // The direction this statement bills (derived from the referral).
     referringOrgId: uuid()
       .notNull()
       .references(() => organizations.id, { onDelete: "restrict" }),
@@ -488,10 +508,14 @@ export const statements = pgTable(
     period: date().notNull(),
     currency: currencyCode(),
     status: statementStatus().notNull().default("draft"),
-    totalGross: cents().notNull().default(0),
+    grossRevenue: cents().notNull().default(0),
     totalDeductions: cents().notNull().default(0),
-    totalNet: cents().notNull().default(0),
-    totalFee: cents().notNull().default(0),
+    netProfit: cents().notNull().default(0),
+    feeAmount: cents().notNull().default(0),
+    /** The fee calc this statement was issued from (audit linkage). */
+    feeCalculationId: uuid().references(() => feeCalculations.id, {
+      onDelete: "set null",
+    }),
     issuedAt: timestamp({ withTimezone: true }),
     issuedByUserId: uuid().references(() => users.id, { onDelete: "set null" }),
     /** Set when a void statement is replaced by a corrected one. */
@@ -502,36 +526,31 @@ export const statements = pgTable(
   },
   (t) => [
     index("statements_rel_idx").on(t.relationshipId),
-    // One statement per direction per period (drafts get reused/replaced).
-    uniqueIndex("statements_direction_period_uq").on(
-      t.relationshipId,
-      t.referringOrgId,
-      t.payingOrgId,
-      t.period,
-    ),
+    index("statements_referral_idx").on(t.referralId),
+    // One statement per referral per period (drafts get reused/replaced).
+    uniqueIndex("statements_referral_period_uq").on(t.referralId, t.period),
   ],
 );
 
-export const statementLineItems = pgTable(
-  "statement_line_items",
+/**
+ * Immutable snapshot of the itemized deduction breakdown for a statement, so a
+ * statement's net-profit math is self-contained even if categories later change.
+ */
+export const statementDeductions = pgTable(
+  "statement_deductions",
   {
     id: uuid().primaryKey().defaultRandom(),
     statementId: uuid()
       .notNull()
       .references(() => statements.id, { onDelete: "cascade" }),
-    referralId: uuid().references(() => referrals.id, { onDelete: "set null" }),
-    /** Snapshot client name at issue time for immutability. */
-    referredClientName: text().notNull(),
-    grossRevenue: cents().notNull(),
-    deductions: cents().notNull(),
-    netProfit: cents().notNull(),
-    feeAmount: cents().notNull(),
-    feeCalculationId: uuid().references(() => feeCalculations.id, {
+    categoryId: uuid().references(() => deductionCategories.id, {
       onDelete: "set null",
     }),
+    label: text().notNull(),
+    amount: cents().notNull(),
     ...timestamps,
   },
-  (t) => [index("statement_line_items_statement_idx").on(t.statementId)],
+  (t) => [index("statement_deductions_statement_idx").on(t.statementId)],
 );
 
 export const payments = pgTable(

@@ -45,7 +45,7 @@ const {
   revenueEntryDeductions,
   feeCalculations,
   statements,
-  statementLineItems,
+  statementDeductions,
   payments,
   auditLog,
 } = schema;
@@ -63,7 +63,7 @@ async function main() {
     // Clean slate (dev). Order respects FKs; cascades handle the rest.
     await tx.delete(auditLog);
     await tx.delete(payments);
-    await tx.delete(statementLineItems);
+    await tx.delete(statementDeductions);
     await tx.delete(statements);
     await tx.delete(feeCalculations);
     await tx.delete(revenueEntryDeductions);
@@ -126,6 +126,7 @@ async function main() {
         orgAId: orgA.id,
         orgBId: orgB.id,
         status: "active",
+        currency: "USD", // one currency for the whole deal room
         createdByUserId: alice.id,
         invitedEmail: "bob@beacon.example",
         invitedAt: new Date("2026-01-05T00:00:00Z"),
@@ -145,7 +146,6 @@ async function main() {
           feeBasis: "net_profit",
           feePercentBps: 2500, // 25.00%
           tailMonths: 12,
-          currency: "USD",
           effectiveFrom: new Date("2026-01-06T00:00:00Z"),
           createdByUserId: alice.id,
           note: "A→B referrals: 25% of net profit for 12 months.",
@@ -157,7 +157,6 @@ async function main() {
           feeBasis: "net_profit",
           feePercentBps: 1500, // 15.00%
           tailMonths: 6,
-          currency: "USD",
           effectiveFrom: new Date("2026-01-06T00:00:00Z"),
           createdByUserId: bob.id,
           note: "B→A referrals: 15% of net profit for 6 months.",
@@ -181,7 +180,8 @@ async function main() {
           submittedAt: new Date("2026-01-10T00:00:00Z"),
           decidedAt: new Date("2026-01-11T00:00:00Z"),
           decidedByUserId: bob.id,
-          convertedAt: new Date("2026-02-01T00:00:00Z"), // tail clock starts
+          acceptedAt: new Date("2026-01-11T00:00:00Z"), // tail clock anchor
+          convertedAt: new Date("2026-02-01T00:00:00Z"), // revenue can be logged
         },
         {
           relationshipId: rel.id,
@@ -195,6 +195,7 @@ async function main() {
           submittedAt: new Date("2026-02-15T00:00:00Z"),
           decidedAt: new Date("2026-02-16T00:00:00Z"),
           decidedByUserId: alice.id,
+          acceptedAt: new Date("2026-02-16T00:00:00Z"),
         },
         {
           relationshipId: rel.id,
@@ -268,7 +269,7 @@ async function main() {
           flatAmount: termsAtoB.flatAmount,
           tailMonths: termsAtoB.tailMonths,
         },
-        refConverted.convertedAt!,
+        refConverted.acceptedAt!, // tail anchored on ACCEPTED date
         {
           period: new Date(`${m.period}T00:00:00Z`),
           grossRevenue: m.gross,
@@ -297,35 +298,36 @@ async function main() {
         })
         .returning();
 
-      // Issue a monthly statement for the A→B direction.
+      // Issue a PER-REFERRAL monthly statement (A→B direction).
       const [stmt] = await tx
         .insert(statements)
         .values({
           relationshipId: rel.id,
+          referralId: refConverted.id,
+          referredClientName: refConverted.referredClientName,
           referringOrgId: orgA.id,
           payingOrgId: orgB.id,
           period: m.period,
           currency: "USD",
           status: "issued",
-          totalGross: m.gross,
+          grossRevenue: m.gross,
           totalDeductions: deductionTotal,
-          totalNet: net,
-          totalFee: fee.feeAmount,
+          netProfit: net,
+          feeAmount: fee.feeAmount,
+          feeCalculationId: calc.id,
           issuedAt: new Date(),
           issuedByUserId: bob.id,
         })
         .returning();
 
-      await tx.insert(statementLineItems).values({
-        statementId: stmt.id,
-        referralId: refConverted.id,
-        referredClientName: refConverted.referredClientName,
-        grossRevenue: m.gross,
-        deductions: deductionTotal,
-        netProfit: net,
-        feeAmount: fee.feeAmount,
-        feeCalculationId: calc.id,
-      });
+      // Snapshot the itemized deduction breakdown onto the statement.
+      await tx.insert(statementDeductions).values(
+        m.deductions.map(([code, amt]) => ({
+          statementId: stmt.id,
+          label: code === "media" ? "Media / ad spend" : "Platform fees",
+          amount: amt,
+        })),
+      );
 
       issuedStatements.push({
         period: m.period,
@@ -339,13 +341,13 @@ async function main() {
     // --- A payment against the first statement (partial demo) ------------
     const firstStmt = await tx.query.statements.findFirst({
       where: (s, { eq, and }) =>
-        and(eq(s.relationshipId, rel.id), eq(s.period, revenueMonths[0].period)),
+        and(eq(s.referralId, refConverted.id), eq(s.period, revenueMonths[0].period)),
     });
     if (firstStmt) {
       await tx.insert(payments).values({
         statementId: firstStmt.id,
         relationshipId: rel.id,
-        amount: firstStmt.totalFee,
+        amount: firstStmt.feeAmount,
         currency: "USD",
         paidAt: ym(2026, 3),
         method: "bank_transfer",

@@ -60,7 +60,7 @@ basis/percent/tail govern the fee. No role is hardcoded on the referral.
 | `relationship_terms` | **Versioned** via `effective_from` / `effective_to` + `version`. Changing terms closes the old row and inserts a new one — history is preserved, and a fee can always be recomputed against the terms in force at the time. |
 | `revenue_entries` | **Append-only.** Corrections insert a new row that `supersedes_id` the old one; `status` (`active`/`superseded`/`void`) marks the current figure. A partial unique index allows only one `active` row per `(referral, period)`. |
 | `fee_calculations` | **Derived & recomputable.** 1:1 with the active revenue entry; the Inngest job replaces it from preserved sources. Snapshots the terms version (`applied_terms_id`) and tail window used. |
-| `statements` | **Immutable once `issued`.** A wrong statement is set `void` and replaced (`superseded_by_statement_id`), never edited in place. Line items snapshot client name + amounts. |
+| `statements` | **Per-referral, immutable once `issued`.** One statement per `(referral, period)`. A wrong statement is set `void` and replaced (`superseded_by_statement_id`), never edited in place. `statement_deductions` snapshots the itemized deduction breakdown so the net-profit math stays self-contained. |
 | `audit_log` | **Append-only**, one row per state change, with `old_values`/`new_values`. |
 
 ## Money
@@ -68,17 +68,22 @@ basis/percent/tail govern the fee. No role is hardcoded on the referral.
 - All amounts are **integer minor units (cents)** in `bigint` columns + a 3-letter
   ISO currency code. **No floats anywhere.** (`src/lib/money.ts`)
 - Percentages are **integer basis points**: `2500 = 25.00%`.
-- Currency defaults to `USD` but is per-relationship/per-terms configurable.
+- **One currency per relationship.** `relationships.currency` is authoritative for
+  the entire deal room (both directions, all revenue/statements/payments).
+  Transactional rows carry a denormalized copy that must match it. Defaults to `USD`.
 
 ## The fee tail window
 
 `relationship_terms.tail_months` defines how long fees accrue after a referral
-**converts**. The window is **`[conversion_month, conversion_month + tail_months)`**
-— the conversion month counts; the month exactly `tail_months` later does not.
-A revenue entry outside the window yields a `fee_amount` of `0` with a recorded
-`note`, rather than being dropped (auditable). Pure logic lives in
-[`src/lib/fees.ts`](./src/lib/fees.ts) and is exercised by both the seed and
-(soon) the Inngest recompute job — single source of truth for the math.
+is **accepted**. The clock is anchored on `referrals.accepted_at` (acceptance,
+not conversion). The window is **`[accepted_month, accepted_month + tail_months)`**
+— the accepted month counts; the month exactly `tail_months` later does not.
+(Conversion is still tracked separately and gates *revenue logging*; it just
+doesn't move the tail clock.) A revenue entry outside the window yields a
+`fee_amount` of `0` with a recorded `note`, rather than being dropped
+(auditable). Pure logic lives in [`src/lib/fees.ts`](./src/lib/fees.ts) and is
+exercised by both the seed and (soon) the Inngest recompute job — single source
+of truth for the math.
 
 ## Tenant isolation
 
@@ -97,25 +102,19 @@ Two layers:
 `organizations`, `users`, `memberships` · `relationships`, `relationship_terms` ·
 `referrals` · `deduction_categories`, `revenue_entries`,
 `revenue_entry_deductions` · `fee_calculations` · `statements`,
-`statement_line_items`, `payments` · `contracts` · `audit_log`.
+`statement_deductions`, `payments` · `contracts` · `audit_log`.
 
 > `contracts` (Capability 3) is included now so the contract↔terms link
 > (`referenced_term_ids`, `is_out_of_date`) exists from the start and we avoid a
 > later migration churn — but the generation feature itself is not built yet.
 
-## Open questions for review
+## Resolved decisions (review round 1)
 
-1. **Statement granularity.** Currently one statement per `(relationship,
-   direction, period)` aggregating all referrals for that month. Alternative:
-   per-referral statements. The rollup matches the prompt ("monthly rollup per
-   relationship per direction") — confirm?
-2. **Tail boundary convention.** I used `[start, start+tailMonths)` counting the
-   conversion month. Some contracts start the clock at the *first revenue month*
-   or the month *after* conversion. Which matches your agreement?
-3. **Net profit definition.** `net_profit = gross_revenue − Σ itemized
-   deductions`, with deduction categories configured by the **paying** org. Are
-   deduction categories better scoped to the **relationship** (so both sides
-   agree on them) than to the org?
-4. **Multi-currency.** Terms carry their own currency; cross-currency between
-   directions is allowed by the schema. Do you need FX handling, or will each
-   relationship be single-currency in practice?
+1. **Statement granularity → per-referral.** One statement per `(referral,
+   period)`, not an aggregated rollup. ✅
+2. **Tail boundary → accepted date.** Tail = `accepted_at + tail_months`,
+   window `[accepted_month, accepted_month + tail_months)`. ✅
+3. **Deductions → paying-org scoped.** Configured by the paying org, per the
+   signed agreement. ✅
+4. **Currency → one per relationship.** `relationships.currency` is
+   authoritative; no cross-currency within a deal room. ✅

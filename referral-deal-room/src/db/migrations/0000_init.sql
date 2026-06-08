@@ -121,6 +121,7 @@ CREATE TABLE "referrals" (
 	"decided_at" timestamp with time zone,
 	"decided_by_user_id" uuid,
 	"rejection_reason" text,
+	"accepted_at" timestamp with time zone,
 	"converted_at" timestamp with time zone,
 	"closed_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -136,7 +137,6 @@ CREATE TABLE "relationship_terms" (
 	"fee_percent_bps" integer,
 	"flat_amount" bigint,
 	"tail_months" integer NOT NULL,
-	"currency" text DEFAULT 'USD' NOT NULL,
 	"effective_from" timestamp with time zone DEFAULT now() NOT NULL,
 	"effective_to" timestamp with time zone,
 	"version" integer DEFAULT 1 NOT NULL,
@@ -154,6 +154,7 @@ CREATE TABLE "relationships" (
 	"org_a_id" uuid NOT NULL,
 	"org_b_id" uuid,
 	"status" "relationship_status" DEFAULT 'invited' NOT NULL,
+	"currency" text DEFAULT 'USD' NOT NULL,
 	"invited_email" text,
 	"created_by_user_id" uuid,
 	"invited_at" timestamp with time zone,
@@ -189,16 +190,12 @@ CREATE TABLE "revenue_entry_deductions" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "statement_line_items" (
+CREATE TABLE "statement_deductions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"statement_id" uuid NOT NULL,
-	"referral_id" uuid,
-	"referred_client_name" text NOT NULL,
-	"gross_revenue" bigint NOT NULL,
-	"deductions" bigint NOT NULL,
-	"net_profit" bigint NOT NULL,
-	"fee_amount" bigint NOT NULL,
-	"fee_calculation_id" uuid,
+	"category_id" uuid,
+	"label" text NOT NULL,
+	"amount" bigint NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -206,15 +203,18 @@ CREATE TABLE "statement_line_items" (
 CREATE TABLE "statements" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"relationship_id" uuid NOT NULL,
+	"referral_id" uuid NOT NULL,
+	"referred_client_name" text NOT NULL,
 	"referring_org_id" uuid NOT NULL,
 	"paying_org_id" uuid NOT NULL,
 	"period" date NOT NULL,
 	"currency" text DEFAULT 'USD' NOT NULL,
 	"status" "statement_status" DEFAULT 'draft' NOT NULL,
-	"total_gross" bigint DEFAULT 0 NOT NULL,
+	"gross_revenue" bigint DEFAULT 0 NOT NULL,
 	"total_deductions" bigint DEFAULT 0 NOT NULL,
-	"total_net" bigint DEFAULT 0 NOT NULL,
-	"total_fee" bigint DEFAULT 0 NOT NULL,
+	"net_profit" bigint DEFAULT 0 NOT NULL,
+	"fee_amount" bigint DEFAULT 0 NOT NULL,
+	"fee_calculation_id" uuid,
 	"issued_at" timestamp with time zone,
 	"issued_by_user_id" uuid,
 	"superseded_by_statement_id" uuid,
@@ -265,12 +265,13 @@ ALTER TABLE "revenue_entries" ADD CONSTRAINT "revenue_entries_supersedes_id_reve
 ALTER TABLE "revenue_entries" ADD CONSTRAINT "revenue_entries_entered_by_user_id_users_id_fk" FOREIGN KEY ("entered_by_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "revenue_entry_deductions" ADD CONSTRAINT "revenue_entry_deductions_revenue_entry_id_revenue_entries_id_fk" FOREIGN KEY ("revenue_entry_id") REFERENCES "public"."revenue_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "revenue_entry_deductions" ADD CONSTRAINT "revenue_entry_deductions_category_id_deduction_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."deduction_categories"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "statement_line_items" ADD CONSTRAINT "statement_line_items_statement_id_statements_id_fk" FOREIGN KEY ("statement_id") REFERENCES "public"."statements"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "statement_line_items" ADD CONSTRAINT "statement_line_items_referral_id_referrals_id_fk" FOREIGN KEY ("referral_id") REFERENCES "public"."referrals"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "statement_line_items" ADD CONSTRAINT "statement_line_items_fee_calculation_id_fee_calculations_id_fk" FOREIGN KEY ("fee_calculation_id") REFERENCES "public"."fee_calculations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "statement_deductions" ADD CONSTRAINT "statement_deductions_statement_id_statements_id_fk" FOREIGN KEY ("statement_id") REFERENCES "public"."statements"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "statement_deductions" ADD CONSTRAINT "statement_deductions_category_id_deduction_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."deduction_categories"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "statements" ADD CONSTRAINT "statements_relationship_id_relationships_id_fk" FOREIGN KEY ("relationship_id") REFERENCES "public"."relationships"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "statements" ADD CONSTRAINT "statements_referral_id_referrals_id_fk" FOREIGN KEY ("referral_id") REFERENCES "public"."referrals"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "statements" ADD CONSTRAINT "statements_referring_org_id_organizations_id_fk" FOREIGN KEY ("referring_org_id") REFERENCES "public"."organizations"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "statements" ADD CONSTRAINT "statements_paying_org_id_organizations_id_fk" FOREIGN KEY ("paying_org_id") REFERENCES "public"."organizations"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "statements" ADD CONSTRAINT "statements_fee_calculation_id_fee_calculations_id_fk" FOREIGN KEY ("fee_calculation_id") REFERENCES "public"."fee_calculations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "statements" ADD CONSTRAINT "statements_issued_by_user_id_users_id_fk" FOREIGN KEY ("issued_by_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "statements" ADD CONSTRAINT "statements_superseded_by_statement_id_statements_id_fk" FOREIGN KEY ("superseded_by_statement_id") REFERENCES "public"."statements"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "audit_log_rel_idx" ON "audit_log" USING btree ("relationship_id");--> statement-breakpoint
@@ -296,6 +297,7 @@ CREATE INDEX "revenue_entries_referral_idx" ON "revenue_entries" USING btree ("r
 CREATE INDEX "revenue_entries_period_idx" ON "revenue_entries" USING btree ("period");--> statement-breakpoint
 CREATE UNIQUE INDEX "revenue_entries_active_uq" ON "revenue_entries" USING btree ("referral_id","period") WHERE "revenue_entries"."status" = 'active';--> statement-breakpoint
 CREATE INDEX "revenue_entry_deductions_entry_idx" ON "revenue_entry_deductions" USING btree ("revenue_entry_id");--> statement-breakpoint
-CREATE INDEX "statement_line_items_statement_idx" ON "statement_line_items" USING btree ("statement_id");--> statement-breakpoint
+CREATE INDEX "statement_deductions_statement_idx" ON "statement_deductions" USING btree ("statement_id");--> statement-breakpoint
 CREATE INDEX "statements_rel_idx" ON "statements" USING btree ("relationship_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "statements_direction_period_uq" ON "statements" USING btree ("relationship_id","referring_org_id","paying_org_id","period");
+CREATE INDEX "statements_referral_idx" ON "statements" USING btree ("referral_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "statements_referral_period_uq" ON "statements" USING btree ("referral_id","period");

@@ -16,7 +16,7 @@ import {
   relationships,
   revenueEntries,
   revenueEntryDeductions,
-  statementLineItems,
+  statementDeductions,
   statements,
   users,
 } from "./schema";
@@ -145,20 +145,24 @@ export const statementsRelations = relations(statements, ({ one, many }) => ({
     fields: [statements.relationshipId],
     references: [relationships.id],
   }),
-  lineItems: many(statementLineItems),
+  referral: one(referrals, {
+    fields: [statements.referralId],
+    references: [referrals.id],
+  }),
+  deductions: many(statementDeductions),
   payments: many(payments),
 }));
 
-export const statementLineItemsRelations = relations(
-  statementLineItems,
+export const statementDeductionsRelations = relations(
+  statementDeductions,
   ({ one }) => ({
     statement: one(statements, {
-      fields: [statementLineItems.statementId],
+      fields: [statementDeductions.statementId],
       references: [statements.id],
     }),
-    referral: one(referrals, {
-      fields: [statementLineItems.referralId],
-      references: [referrals.id],
+    category: one(deductionCategories, {
+      fields: [statementDeductions.categoryId],
+      references: [deductionCategories.id],
     }),
   }),
 );
