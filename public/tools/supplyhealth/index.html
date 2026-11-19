@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supply Health Check — Marcus and Muse</title>
+<meta name="description" content="Free ads.txt and app-ads.txt validator. Verify every declared supply path against each exchange's sellers.json and get a graded supply-chain health report.">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;800&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ---- Brand tokens: tweak to match marcusandmuse.com ---- */
+  :root {
+    --ink: #12241C;
+    --paper: #FAFBF9;
+    --card: #FFFFFF;
+    --slate: #5B6B66;
+    --line: #DCE2DD;
+    --accent: #1F7A4D;
+    --warn: #B7791F;
+    --fault: #B3362E;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--paper); color: var(--ink);
+         font: 15px/1.55 "IBM Plex Sans", system-ui, sans-serif; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 44px 20px 80px; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .92em; }
+  .muted { color: var(--slate); }
+  a { color: var(--accent); }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 12px;
+             letter-spacing: .14em; text-transform: uppercase; color: var(--slate); }
+  h1 { font-family: Sora, sans-serif; font-weight: 800;
+       font-size: clamp(28px, 5vw, 42px); line-height: 1.12; margin: 10px 0 12px; }
+  .sub { color: var(--slate); max-width: 640px; }
+
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+           padding: 22px; margin-top: 30px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  input[type=text] { flex: 1; min-width: 220px; padding: 13px 14px; font: inherit;
+    border: 1px solid var(--line); border-radius: 7px; background: var(--paper); }
+  input[type=text]:focus, textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  button.go { padding: 13px 26px; font: 600 15px Sora, sans-serif; color: #fff;
+    background: var(--accent); border: 0; border-radius: 7px; cursor: pointer; }
+  button.go:disabled { opacity: .55; cursor: wait; }
+  .opts { display: flex; gap: 20px; align-items: center; margin-top: 14px;
+          flex-wrap: wrap; font-size: 13.5px; color: var(--slate); }
+  .opts label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  .paste-toggle { background: none; border: 0; color: var(--accent); cursor: pointer;
+                  font: inherit; padding: 0; text-decoration: underline; }
+  textarea { width: 100%; min-height: 170px; margin-top: 14px; padding: 13px 14px;
+    font: 13px/1.5 "IBM Plex Mono", monospace; border: 1px solid var(--line);
+    border-radius: 7px; background: var(--paper); display: none; resize: vertical; }
+  .hint { font-size: 12.5px; color: var(--slate); margin-top: 10px; }
+
+  #status { display: none; margin-top: 26px; padding: 18px 20px; border: 1px solid var(--line);
+            border-radius: 10px; background: var(--card); }
+  #status.err { border-color: var(--fault); color: var(--fault); }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--line);
+    border-top-color: var(--accent); border-radius: 50%; margin-right: 10px;
+    vertical-align: -2px; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progressbar { height: 6px; background: #EAEEEA; border-radius: 4px; margin-top: 12px; overflow: hidden; }
+  .progressbar div { height: 100%; background: var(--accent); border-radius: 4px;
+                     width: 0; transition: width .6s ease; }
+
+  #results { display: none; margin-top: 34px; }
+  .res-head { display: flex; justify-content: space-between; gap: 22px; align-items: flex-start;
+    flex-wrap: wrap; padding-bottom: 24px; border-bottom: 3px solid var(--ink); }
+  .res-head h2 { font-family: Sora, sans-serif; font-weight: 800;
+    font-size: clamp(22px, 4vw, 32px); word-break: break-word; }
+  .res-head .file { color: var(--slate); font-weight: 600; }
+  .grade { text-align: center; flex-shrink: 0; }
+  .grade .disc { width: 96px; height: 96px; border-radius: 50%; border: 4px solid;
+    display: flex; align-items: center; justify-content: center;
+    font: 800 48px Sora, sans-serif; }
+  .grade .num { margin-top: 6px; font: 13px "IBM Plex Mono", monospace; color: var(--slate); }
+
+  section { margin-top: 38px; }
+  section h3 { font: 600 18px Sora, sans-serif; margin-bottom: 14px; }
+  .chain { display: flex; flex-wrap: wrap; gap: 2px; padding: 13px;
+    border: 1px solid var(--line); background: var(--card); border-radius: 8px; }
+  .tick { width: 9px; height: 24px; border-radius: 2px; }
+  .legend { margin-top: 10px; display: flex; gap: 16px; flex-wrap: wrap;
+            font-size: 13px; color: var(--slate); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+
+  .cat { padding: 13px 0; border-bottom: 1px solid var(--line); }
+  .cat-head { display: flex; justify-content: space-between; font-weight: 600; gap: 10px; }
+  .meter { height: 7px; background: #EAEEEA; border-radius: 4px; margin: 8px 0 6px; overflow: hidden; }
+  .meter div { height: 100%; border-radius: 4px; }
+  .detail { font-size: 13.5px; color: var(--slate); }
+
+  .finding { display: flex; gap: 13px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+  .sev, .pill { font: 11px "IBM Plex Mono", monospace; letter-spacing: .06em; border: 1px solid;
+    border-radius: 3px; padding: 2px 7px; height: fit-content; white-space: nowrap; }
+  .f-title { font-weight: 600; margin-bottom: 2px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 11px "IBM Plex Mono", monospace; letter-spacing: .08em;
+       text-transform: uppercase; color: var(--slate); }
+  details summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+  .tbl-scroll { overflow-x: auto; }
+
+  .cta { margin-top: 44px; padding: 26px; border-radius: 10px; background: var(--ink);
+         color: var(--paper); }
+  .cta h3 { font: 600 19px Sora, sans-serif; margin-bottom: 8px; }
+  .cta p { color: #C7D2CC; max-width: 640px; }
+  .cta a.btn { display: inline-block; margin-top: 16px; padding: 12px 24px; border-radius: 7px;
+    background: var(--paper); color: var(--ink); font: 600 14px Sora, sans-serif;
+    text-decoration: none; }
+
+  footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line);
+    font-size: 12.5px; color: var(--slate); display: flex; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Free tool · Marcus and Muse</div>
+  <h1>Supply Health Check</h1>
+  <p class="sub">Paste a domain or an ads.txt / app-ads.txt file. Every declared supply path is
+    verified against the exchange's own sellers.json — stale seller IDs, relationship mismatches,
+    confidential sellers, and reseller-heavy paths, graded from live data. Large files take a
+    minute or two; the check runs every exchange, not a sample.</p>
+
+  <div class="panel">
+    <div class="row">
+      <input type="text" id="domain" placeholder="publisher-domain.com"
+             autocomplete="off" spellcheck="false">
+      <button class="go" id="go">Run check</button>
+    </div>
+    <div class="opts">
+      <label><input type="radio" name="ftype" value="ads" checked> ads.txt (web)</label>
+      <label><input type="radio" name="ftype" value="app"> app-ads.txt (CTV &amp; apps)</label>
+      <button class="paste-toggle" id="pasteToggle" type="button">or paste file contents instead</button>
+    </div>
+    <textarea id="content" placeholder="google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0&#10;rubiconproject.com, 12345, RESELLER, 0bfd66d529a55807&#10;…" spellcheck="false"></textarea>
+    <div class="hint">Checks run against live exchange sellers.json files, including the very large
+      ones. Anything that cannot be verified is labeled, never guessed.</div>
+  </div>
+
+  <div id="status"></div>
+
+  <div id="results">
+    <div class="res-head">
+      <div>
+        <h2 id="r-title"></h2>
+        <div class="muted" id="r-meta" style="margin-top:8px"></div>
+      </div>
+      <div class="grade"><div class="disc" id="r-disc"></div><div class="num" id="r-num"></div></div>
+    </div>
+
+    <section>
+      <h3>Chain integrity</h3>
+      <div class="chain" id="r-chain"></div>
+      <div class="legend" id="r-legend"></div>
+      <p class="detail" style="margin-top:9px">Each tick is one declared supply path, verified
+        against the exchange's own sellers.json.</p>
+    </section>
+
+    <section><h3>Score breakdown</h3><div id="r-cats"></div></section>
+    <section><h3>Findings</h3><div id="r-findings"></div></section>
+
+    <section>
+      <details>
+        <summary id="r-tbl-summary">Full path verification table</summary>
+        <div class="tbl-scroll"><table>
+          <thead><tr><th>Exchange</th><th>Seller ID</th><th>Rel.</th><th>Status</th>
+          <th>Seller name</th><th>Note</th></tr></thead>
+          <tbody id="r-rows"></tbody>
+        </table></div>
+      </details>
+    </section>
+
+    <div class="cta">
+      <h3>This is the automated check. The audit goes deeper.</h3>
+      <p>Schain validation in the bid stream, demand-path mapping, reseller pruning that protects
+        revenue, and weekly drift monitoring that catches new unauthorized paths before buyers do.
+        Supply-side consulting from 17+ years in programmatic.</p>
+      <a class="btn" href="https://marcusandmuse.com/#contact">Book a supply chain audit →</a>
+    </div>
+  </div>
+
+  <footer>
+    <span>© Marcus and Muse · Ottawa, Canada · Supply-side programmatic consulting</span>
+    <span class="mono">supply-health v1</span>
+  </footer>
+</div>
+
+<script>
+const API_START = "/api/supplyhealth-audit";
+const API_STATUS = "/api/supplyhealth-status";
+const POLL_MS = 2500;
+const MAX_WAIT_MS = 16 * 60 * 1000;
+
+const STATE = {
+  verified:      ["Verified",      "#1F7A4D"],
+  type_mismatch: ["Type mismatch", "#B7791F"],
+  not_listed:    ["Not listed",    "#B3362E"],
+  unverifiable:  ["Unverifiable",  "#8A8F8C"],
+  skipped:       ["Not checked",   "#D5DAD6"],
+};
+const SEV = { critical:"#B3362E", high:"#B3362E", medium:"#B7791F", low:"#5B6B66", info:"#1F7A4D" };
+const GRADE = { A:"#1F7A4D", B:"#4C8A3F", C:"#B7791F", D:"#C05A2B", F:"#B3362E" };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "—").replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+$("pasteToggle").addEventListener("click", () => {
+  const ta = $("content");
+  const showing = ta.style.display === "block";
+  ta.style.display = showing ? "none" : "block";
+  $("pasteToggle").textContent = showing ? "or paste file contents instead" : "hide paste box";
+});
+
+function setStatus(html, isErr) {
+  const s = $("status");
+  s.style.display = "block";
+  s.className = isErr ? "err" : "";
+  s.innerHTML = html;
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function progressHtml(msg, done, total) {
+  const pct = total ? Math.round(done / total * 100) : 0;
+  return '<span class="spinner"></span>' + esc(msg) +
+    (total ? ' <span class="mono muted">(' + done + "/" + total + " exchanges)</span>" +
+      '<div class="progressbar"><div style="width:' + pct + '%"></div></div>' : "");
+}
+
+async function run() {
+  const domain = $("domain").value.trim();
+  const content = $("content").style.display === "block" ? $("content").value.trim() : "";
+  if (!domain && !content) {
+    setStatus("Enter a domain, or paste the contents of an ads.txt / app-ads.txt file.", true);
+    return;
+  }
+  $("go").disabled = true;
+  $("results").style.display = "none";
+  setStatus(progressHtml("Starting the check…"));
+  const id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2));
+
+  try {
+    const start = await fetch(API_START, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id, domain, content,
+        app: document.querySelector('input[name=ftype]:checked').value === "app",
+      }),
+    });
+    if (start.status >= 400) throw new Error("start failed");
+
+    const t0 = Date.now();
+    while (Date.now() - t0 < MAX_WAIT_MS) {
+      await sleep(POLL_MS);
+      let st;
+      try {
+        st = await (await fetch(API_STATUS + "?id=" + encodeURIComponent(id), { cache: "no-store" })).json();
+      } catch { continue; }
+      if (st.status === "done") { render(st.result); $("status").style.display = "none"; return; }
+      if (st.status === "error") { setStatus(esc(st.error || "The check failed. Try again."), true); return; }
+      if (st.status === "running" && st.total) {
+        setStatus(progressHtml("Checking each exchange's sellers.json…", st.done || 0, st.total));
+      } else if (st.status === "running") {
+        setStatus(progressHtml(st.phase ? "Working: " + st.phase + "…" : "Working…"));
+      } else {
+        setStatus(progressHtml("Queued… large files can take a minute or two."));
+      }
+    }
+    setStatus("The check is taking longer than expected. Leave this page open and try again in a few minutes, or use the paste option.", true);
+  } catch (e) {
+    setStatus("The check could not be started (network error). Try again.", true);
+  } finally {
+    $("go").disabled = false;
+  }
+}
+$("go").addEventListener("click", run);
+$("domain").addEventListener("keydown", e => { if (e.key === "Enter") run(); });
+
+function render(d) {
+  const gc = GRADE[d.grade] || "#12241C";
+  $("r-title").innerHTML = esc(d.domain || "Pasted file") +
+    ' <span class="file">/ ' + esc(d.file) + "</span>";
+  const s = d.stats || {};
+  $("r-meta").textContent =
+    (s.records || 0) + " declared paths across " + (s.exchanges || 0) +
+    " exchanges · checked in " + d.elapsed + "s";
+  const disc = $("r-disc");
+  disc.textContent = d.grade;
+  disc.style.borderColor = gc; disc.style.color = gc;
+  $("r-num").textContent = d.score + " / 100";
+
+  $("r-chain").innerHTML = (d.checks || []).map(c => {
+    const [label, col] = STATE[c.state] || STATE.skipped;
+    return '<span class="tick" style="background:' + col + '" title="' +
+      esc(c.exchange) + ":" + esc(c.id) + " — " + label + '"></span>';
+  }).join("") || '<span class="detail">No records to display.</span>';
+
+  $("r-legend").innerHTML = ["verified","type_mismatch","not_listed","unverifiable"]
+    .map(k => '<span><i style="background:' + STATE[k][1] + '"></i>' + STATE[k][0] + "</span>").join("");
+
+  $("r-cats").innerHTML = (d.categories || []).map(c => {
+    const pct = c.max ? (c.points / c.max * 100) : 0;
+    const col = pct >= 80 ? "#1F7A4D" : pct >= 50 ? "#B7791F" : "#B3362E";
+    return '<div class="cat"><div class="cat-head"><span>' + esc(c.name) +
+      '</span><span class="mono">' + c.points + " / " + c.max + "</span></div>" +
+      '<div class="meter"><div style="width:' + pct.toFixed(0) + "%;background:" + col +
+      '"></div></div><div class="detail">' + esc(c.detail) + "</div></div>";
+  }).join("");
+
+  $("r-findings").innerHTML = (d.findings || []).map(f => {
+    const col = SEV[f.severity] || "#5B6B66";
+    return '<div class="finding"><span class="sev" style="color:' + col +
+      ";border-color:" + col + '">' + esc(f.severity.toUpperCase()) +
+      '</span><div><div class="f-title">' + esc(f.title) +
+      '</div><div class="detail">' + esc(f.detail) + "</div></div></div>";
+  }).join("");
+
+  const order = { not_listed:0, type_mismatch:1, unverifiable:2, skipped:3, verified:4 };
+  const rows = [...(d.checks || [])].sort((a, b) =>
+    (order[a.state] ?? 9) - (order[b.state] ?? 9) || a.exchange.localeCompare(b.exchange));
+  $("r-tbl-summary").textContent = "Full path verification table (" + rows.length + " records)";
+  $("r-rows").innerHTML = rows.map(c => {
+    const [label, col] = STATE[c.state] || STATE.skipped;
+    return "<tr><td class='mono'>" + esc(c.exchange) + "</td><td class='mono'>" + esc(c.id) +
+      "</td><td>" + esc(c.rel) + '</td><td><span class="pill" style="color:' + col +
+      ";border-color:" + col + '">' + label + "</span></td><td>" + esc(c.name) +
+      "</td><td class='detail'>" + esc(c.note || "") + "</td></tr>";
+  }).join("");
+
+  $("results").style.display = "block";
+  $("results").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+</script>
+</body>
+</html>
